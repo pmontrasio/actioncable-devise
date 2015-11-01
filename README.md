@@ -10,6 +10,7 @@ Environment
 * Chromium Version 37.0.2062.120 Ubuntu 12.04 (281580) (64-bit)
 
     $ bundle install
+    $ echo "SECRET_KEY_BASE=$(bundle exec rake secret)" > .env.development
     $ bundle exec rake db:migrate
     $ grep actioncable Gemfile.lock
       remote: git://github.com/rails/actioncable.git

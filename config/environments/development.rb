@@ -41,4 +41,6 @@ Rails.application.configure do
   # config.action_view.raise_on_missing_translations = true
 
   config.web_console.whitelisted_ips = '192.168.1.0/16'
+
+  ActionCable.server.config.log_tags = [ :action_cable, -> request { request.uuid } ]
 end

@@ -1,13 +1,21 @@
 == README
 
 This is a basic webapp that integrates devise with the websocket authentication.
-It illustrates a possible issue with the cable JavaScript code.
 
-Environment
+It builds over the example at https://github.com/rails/actioncable
+and it integrates with devise with the method explained at http://www.rubytutorial.io/actioncable-devise-authentication/
+
+The goal is to put all the pieces together and get them working, not to create something original.
+
+It illustrates a possible issue with the cable JavaScript code in actioncable 0.0.3.
+
+=== Environment
 
 * Ruby 2.2.3
 * Firefox 41.0.2 (Ubuntu 12.04 canonical - 1.0)
 * Chromium Version 37.0.2062.120 Ubuntu 12.04 (281580) (64-bit)
+
+=== Setup
 
     $ bundle install
     $ echo "SECRET_KEY_BASE=$(bundle exec rake secret)" > .env.development
@@ -39,6 +47,8 @@ Quick debugging hack to make the issue easier to spot:
       else
         console.log("isOpen false")
         false
+
+=== Reproduce the issue
 
 Register a user using the link in the form at http://localhost:3000 (it's plain devise)
 

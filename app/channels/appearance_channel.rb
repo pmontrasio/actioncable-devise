@@ -8,7 +8,7 @@ class AppearanceChannel < ApplicationCable::Channel
   end
 
   def appear(data)
-    byebug
+    #byebug
     logger.info("AppearanceChannel appear")
     current_user.appear on: data['appearing_on']
   end

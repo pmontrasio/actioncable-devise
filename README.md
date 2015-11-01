@@ -31,9 +31,29 @@ It illustrates a possible issue with the cable JavaScript code in actioncable 0.
 
 * Optional: ```tail -f log/development.log``` in a third terminal
 
+## Setup for debugging ##
+
 Quick debugging hack to make the issue easier to spot:
 
 * ```cd $(bundle show actioncable)```
+
+* ```vi lib/assets/javascripts/cable/subscription.coffee``` and add three log points
+
+    perform: (action, data = {}) ->
+      console.log("1 " + JSON.stringify(data))
+      data.action = action
+      console.log("2 " + JSON.stringify(data))
+      @send(data)
+
+    send: (data) ->
+      console.log("3 " + JSON.stringify(data))
+      @consumer.send(command: "message", identifier: @identifier, data: JSON.stringify(data))
+
+* ```vi lib/assets/javascripts/cable/consumer.coffee``` and add this log point
+
+    send: (data) ->
+      console.log("4 " + JSON.stringify(data))
+      @connection.send(data)
 
 * ```vi lib/assets/javascripts/cable/connection.coffee``` and alter the send method like this:
 
@@ -41,45 +61,87 @@ Quick debugging hack to make the issue easier to spot:
       if @isOpen()
         json = JSON.stringify(data);
         @webSocket.send(json)
-        console.log("isOpen true, " + json);
-        console.log("isOpen true")
+        console.log("5 isOpen true, " + json);
         true
       else
-        console.log("isOpen false")
+        console.log("5 isOpen false")
         false
 
-## Reproduce the issue ##
+## The issue ##
 
 Register a user using the link in the form at http://localhost:3000 (it's plain devise)
 
 Sign into the web app. The messages in the console are (Firefox with Firebug):
 
-    isOpen false
-    AppearanceChannel#appear(data)
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    5 isOpen false
     appearingOn hello
-    isOpen false
-    isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    AppearanceChannel#appear(data: { appearing_on: hello})
+    1 {"appearing_on":"hello"}
+    2 {"appearing_on":"hello","action":"appear"}
+    3 {"appearing_on":"hello","action":"appear"}
+    4 {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
+    5 isOpen false
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    5 isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
 
 Sign in and out several times and check the messages.
+It seems that ```"data": { "appearing_on": "hello" }``` is lost along the way, maybe because the socket is
+closed when it's issued for the first time and when ```message``` is sent.
+Finally, ```subscribe``` is sent on the open socket but there is no ```message``` sent anymore.
 
 Add a breakpoint to assets/cable/connection.self.js lines 18 and 23. The last message changes.
 
-    isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
-    isOpen false
-    AppearanceChannel#appear(data)
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    5 isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    # Note: the breakpoint at line 18 should have fired, but it doesn't either in Firebug or in the dev tools.
+    # The breakpoint at line 23 is reached here
+    5 isOpen false
     appearingOn hello
-    isOpen true, {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
+    AppearanceChannel#appear(data: { appearing_on: hello})
+    1 {"appearing_on":"hello"}
+    2 {"appearing_on":"hello","action":"appear"}
+    3 {"appearing_on":"hello","action":"appear"}
+    4 {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
+    #The breakpoint at line 18 is reached here
+    5 isOpen true, {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
 
-It includes the ```data``` generated in ```appearance.coffee``` (the ```hello``` string.)
-Furthermore ```bin/cable``` hits the breakpoint in the Ruby code at ```AppearanceChannel#appear(data)``` now,
+It could be that the breakpoints give time to the browser to open the websocket so that the ```message``` gets through to the cable server.
+
+Furthermore ```bin/cable``` runs the Ruby code in ```AppearanceChannel#appear(data)``` now,
 because of the ```data``` key added to the JS object.
-Apparently it's not added unless there is a breakpoint in the code. Still to investigate why.
 
 Chromium has a different behavior: it logs first a call to send with a
 closed ```@webSocket```, then one with the open socket.
 
-    isOpen false
-    isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
-    AppearanceChannel#appear(data)
+Without the breakpoints
+
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    5 isOpen false
     appearingOn hello
-    isOpen true, {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
+    AppearanceChannel#appear(data: { appearing_on: hello})
+    1 {"appearing_on":"hello"}
+    2 {"appearing_on":"hello","action":"appear"}
+    3 {"appearing_on":"hello","action":"appear"}
+    4 {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
+    5 isOpen false
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    5 isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+
+With the breakpoints
+
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    breakpoint line 23
+    5 isOpen false
+    4 {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    breakpoint line 18
+    5 isOpen true, {"command":"subscribe","identifier":"{\"channel\":\"AppearanceChannel\"}"}
+    appearingOn hello
+    AppearanceChannel#appear(data: { appearing_on: hello})
+    1 {"appearing_on":"hello"}
+    2 {"appearing_on":"hello","action":"appear"}
+    3 {"appearing_on":"hello","action":"appear"}
+    4 {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}
+    breakpoint line 18
+    5 isOpen true, {"command":"message","identifier":"{\"channel\":\"AppearanceChannel\"}","data":"{\"appearing_on\":\"hello\",\"action\":\"appear\"}"}

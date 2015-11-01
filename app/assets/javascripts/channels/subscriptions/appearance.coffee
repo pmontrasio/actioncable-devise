@@ -3,8 +3,9 @@ App.appearance = App.cable.subscriptions.create "AppearanceChannel",
     # Called once the subscription has been successfully completed
 
   appear: ->
-    console.log "AppearanceChannel#appear(data)"
-    @perform 'appear', appearing_on: @appearingOn()
+    data = appearing_on: @appearingOn()
+    console.log "AppearanceChannel#appear(data: { appearing_on: " + data.appearing_on + "})"
+    @perform 'appear', data
 
   away: ->
     console.log "AppearanceChannel#away"

@@ -1,4 +1,4 @@
-== README
+# README #
 
 This is a basic webapp that integrates devise with the websocket authentication.
 
@@ -9,13 +9,13 @@ The goal is to put all the pieces together and get them working, not to create s
 
 It illustrates a possible issue with the cable JavaScript code in actioncable 0.0.3.
 
-=== Environment
+## Environment ##
 
 * Ruby 2.2.3
 * Firefox 41.0.2 (Ubuntu 12.04 canonical - 1.0)
 * Chromium Version 37.0.2062.120 Ubuntu 12.04 (281580) (64-bit)
 
-=== Setup
+## Setup ##
 
     $ bundle install
     $ echo "SECRET_KEY_BASE=$(bundle exec rake secret)" > .env.development
@@ -48,7 +48,7 @@ Quick debugging hack to make the issue easier to spot:
         console.log("isOpen false")
         false
 
-=== Reproduce the issue
+## Reproduce the issue ##
 
 Register a user using the link in the form at http://localhost:3000 (it's plain devise)
 

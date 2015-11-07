@@ -7,7 +7,8 @@ and it integrates with devise with the method explained at http://www.rubytutori
 
 The goal is to put all the pieces together and get them working, not to create something original.
 
-It illustrates a possible issue with the cable JavaScript code in actioncable 0.0.3.
+It illustrates a possible issue with the example JavaScript code in actioncable 0.0.3.
+See https://github.com/rails/actioncable/issues/118
 
 ## Environment ##
 
@@ -266,4 +267,4 @@ Server side log:
     [ActionCable] [paolo@example.com] AppearanceChannel is transmitting the subscription confirmation
     [ActionCable] [paolo@example.com] AppearanceChannel#appear({"appearing_on"=>"hello"})
     [ActionCable] [paolo@example.com] AppearanceChannel appear
-        [ActionCable] [paolo@example.com] User paolo@example.com appears on {:on=>"hello"}
+    [ActionCable] [paolo@example.com] User paolo@example.com appears on {:on=>"hello"}
